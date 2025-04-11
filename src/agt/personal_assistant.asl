@@ -17,11 +17,11 @@ broadcast(jason).
 */
 @start_plan
 +!start : true <-
-    .print("Starting Personal Assistant...");
+    .print("Hello world");
     makeArtifact("mqttArtifactPersonal", "room.MQTTArtifact", ["personal_assistant"], Art);
     focus(Art);
     +mqtt_artifact(Art);
-    .print("MQTT artifact created and focused:", Art);
+    .print("MQTT artifact created and focused:", Art).
 
 /* 
  * Task 1: Plan for sending MQTT messages (using the artifact directly).

@@ -25,7 +25,8 @@ owner_state(_).
     .print("Hello world");
     // performs an action that creates a new artifact of type ThingArtifact, named "wristband" using the WoT TD located at Url
     // the action unifies ArtId with the ID of the artifact in the workspace
-    makeArtifact("wristband", "org.hyperagents.jacamo.artifacts.wot.ThingArtifact", [Url], ArtId);
+    makeArtifact("wristband", "org.hyperagents.jacamo.artifacts.wot.ThingArtifact", [Url], WristbandArt);
+    .print("Wristband Thing Artifact created:", WristbandArt);
     !read_owner_state. // creates the goal !read_owner_state
 
 /* 
@@ -53,7 +54,8 @@ owner_state(_).
 */
 @owner_state_plan
 +owner_state(State) : true <-
-    .print("The owner is ", State).
+    .print("The owner is ", State);
+    .send(personal_assistant, tell, wristband(State)).
 
 /* Import behavior of agents that work in CArtAgO environments */
 { include("$jacamoJar/templates/common-cartago.asl") }

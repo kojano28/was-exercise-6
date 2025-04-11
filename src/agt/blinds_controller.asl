@@ -15,19 +15,22 @@ blinds("lowered").
 !start.
 
 /* 
- * Task 1: Plan for reacting to the addition of the goal !start
+ * Task 1+2: Plan for reacting to the addition of the goal !start
  * Triggering event: addition of goal !start
  * Context: the agents believes that a WoT TD of a was:Blinds is located at Url
- * Body: creates an MQTTArtifact using makeArtifact, focuses on it, 
+ * Body: creates an MQTTArtifact using makeArtifact, focuses on it, creates ThingArtifact for the blinds
 */
 @start_plan
 +!start : td("https://was-course.interactions.ics.unisg.ch/wake-up-ontology#Blinds", Url) <-
-    .print("Starting Blinds Controller...");
+    .print("Hello world");
+    // Create MQTTArtifact for communication.
     makeArtifact("mqttArtifactBlinds", "room.MQTTArtifact", ["blinds_controller"], Art);
     focus(Art);
     +mqtt_artifact(Art);
-    .print("MQTT artifact created and focused:", Art).
-
+    .print("MQTT artifact created and focused:", Art);
+    // Create the ThingArtifact representing the blinds using its WoT TD.
+    makeArtifact("blinds", "org.hyperagents.jacamo.artifacts.wot.ThingArtifact", [Url], BlindsArt);
+    .print("Blinds Thing Artifact created:", BlindsArt).
 /* 
  * Task 1: Plan for reacting to a received messaage
  * Triggering event: a received message with performative "tell")
@@ -37,6 +40,46 @@ blinds("lowered").
 @react_received_msg_plan
 +mqttMessage(Sender, tell, Content)
    <- .print("Blinds Controller received MQTT message from", Sender, "with content:", Content).
+
+/* 
+ * Task 2: Plan for raising the blinds
+ * Triggering event: addition of the goal !raise_blinds
+ * Context: true (the plan is always applicable)
+ * Body: 
+ *   - Exploits the action affordance was:SetState based on the jacamo-hypermedia lib
+ *   - Updates the internal belief
+ *   - Prints a confirmation
+ */
+@raise_blinds_plan
++!raise_blinds : true <-
+    invokeAction("https://was-course.interactions.ics.unisg.ch/wake-up-ontology#SetState",
+            ["https://www.w3.org/2019/wot/json-schema#StringSchema"],
+            ["raised"])[artifact_id(BlindsArt)];
+    -+blinds("lowered");
+    +blinds("raised");
+    .print("Blinds raised");
+    .send(personal_assistant, tell, blinds(raised)).
+
+
+/* 
+ * Task 2: Plan for lowering the blinds
+ * Triggering event: addition of the goal !lower_blinds
+ * Context: true (the plan is always applicable)
+ * Body: 
+ *   - Exploits the action affordance was:SetState based on the jacamo-hypermedia lib
+ *   - Updates the internal belief
+ *   - Prints a confirmation
+ */
+@lower_blinds_plan
++!lower_blinds : true <-
+    invokeAction("https://was-course.interactions.ics.unisg.ch/wake-up-ontology#SetState",
+            ["https://www.w3.org/2019/wot/json-schema#StringSchema"],
+            ["lowered"])[artifact_id(BlindsArt)];
+    -+blinds("raised");
+    +blinds("lowered");
+    .print("Blinds lowered");
+    .send(personal_assistant, tell, blinds(lowered)).
+
 
 /* Import behavior of agents that work in CArtAgO environments */
 { include("$jacamoJar/templates/common-cartago.asl") }
