@@ -46,8 +46,8 @@ upcoming_event(_).
     -+upcoming_event(Event); // updates the beleif upcoming_event
     .print("Calendar Manager: Upcoming event: ", Event);
     .wait(5000);
-    !read_upcoming_event; // creates the goal !read_upcoming_event
-    .send(personal_assistant, tell, calenderService(Event)).
+    .send(personal_assistant, tell, upcoming_event(Event)); // Task 3
+    !read_upcoming_event. // creates the goal !read_upcoming_event, for polling events
 
 
 /* Import behavior of agents that work in CArtAgO environments */

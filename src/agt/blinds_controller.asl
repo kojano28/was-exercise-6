@@ -41,6 +41,7 @@ blinds("lowered").
 +mqttMessage(Sender, tell, Content)
    <- .print("Blinds Controller received MQTT message from", Sender, "with content:", Content).
 
+
 /* 
  * Task 2: Plan for raising the blinds
  * Triggering event: addition of the goal !raise_blinds
@@ -52,13 +53,11 @@ blinds("lowered").
  */
 @raise_blinds_plan
 +!raise_blinds : true <-
-    invokeAction("https://was-course.interactions.ics.unisg.ch/wake-up-ontology#SetState",
-            ["https://www.w3.org/2019/wot/json-schema#StringSchema"],
-            ["raised"])[artifact_id(BlindsArt)];
-    -+blinds("lowered");
+    invokeAction("https://was-course.interactions.ics.unisg.ch/wake-up-ontology#SetState",["raised"]);
+    -blinds("lowered");
     +blinds("raised");
     .print("Blinds raised");
-    .send(personal_assistant, tell, blinds(raised)).
+    .send(personal_assistant, tell, blinds("raised")). // Task 3
 
 
 /* 
@@ -72,13 +71,31 @@ blinds("lowered").
  */
 @lower_blinds_plan
 +!lower_blinds : true <-
-    invokeAction("https://was-course.interactions.ics.unisg.ch/wake-up-ontology#SetState",
-            ["https://www.w3.org/2019/wot/json-schema#StringSchema"],
-            ["lowered"])[artifact_id(BlindsArt)];
-    -+blinds("raised");
+    invokeAction("https://was-course.interactions.ics.unisg.ch/wake-up-ontology#SetState",["lowered"]);
+    -blinds("raised");
     +blinds("lowered");
     .print("Blinds lowered");
-    .send(personal_assistant, tell, blinds(lowered)).
+    .send(personal_assistant, tell, blinds("lowered")). // Task 3
+
+// Task 4.3
+
+// If the blinds are lowered, the blinds controller should propose to raise the blinds
+@cfp_blinds_lowered_plan
++message(personal_assistant, tell, cfp(wake_up, increase_illuminance)) : blinds("lowered") <-
+    .print("Blinds Controller: Blinds are lowered. Proposing to raise blinds.");
+    .send(personal_assistant, tell, propose(blinds, raise)).
+
+
+// if the blindes are already raised then it should refuse the call
+@cfp_blinds_raised_plan
++message(personal_assistant, tell, cfp(wake_up, increase_illuminance)) : blinds("raised") <-
+    .print("Blinds Controller: Blinds are already raised. Refusing CFP.");
+    .send(personal_assistant, tell, refuse(blinds, raise)).
+
+@accept_blinds_plan
++accept(blinds, raise) : true <-
+    .print("Blinds Controller: Acceptance received. Raising blinds.");
+    !raise_blinds.
 
 
 /* Import behavior of agents that work in CArtAgO environments */

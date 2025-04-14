@@ -2,11 +2,22 @@
 
 broadcast(jason).
 
+/* Task 4: Initial beluefs */ 
+
+
+// ranking Lights
+prefer(naturalLight, 0).
+prefer(artificialLight, 1).
+
+
+// mapping controllers to wake up methos
+wakeupMethod(blinds, naturalLight).
+wakeupMethod(lights, artificialLight).
+
 /* Initial goals */ 
 
 // The agent has the goal to start
 !start.
-
 
 
 /* 
@@ -55,9 +66,80 @@ broadcast(jason).
  * Context: the agent is focused on the MQTTArtifact
  * Body: prints the received message
 */
-@react_received_msg_plan
+@react_received_mqtt_msg_plan
 +mqttMessage(Sender, tell, Content)
   <- .print("Personal Assistant Received MQTT message from", Sender, "with content:", Content).
+
+
+/* 
+ * Task 3: Plan for reacting to a received message, like states from the controllers, except their proposals
+*/
+@message_plan
++message(Sender, tell, Content) : true <-
+    .print("Personal Assistant received message from ", Sender, ": ", Content).
+
+// Task 4.3
+
+// Wake up routine if event "now" and owner "asleep" 
+@wake_up_routine_plan
++!wake_up_routine : true <-
+    .print("Wake-up Routine: Broadcasting CFP for wake up");
+    !selective_broadcast(personal_assistant, tell, cfp(wake_up, increase_illuminance));
+    .print("Broadcast/CFP sent.");
+    .wait(2000);
+    ?not proposalReceived(_);
+    !noProposals.
+
+// Task 4: additional plan to check the owners state and start wake_up_routine again
+@wakeup_loop_plan
++!wakeup_loop : owner_state("asleep") <-
+    .print("User is still asleep. Initiating a new wake-up round...");
+    !wake_up_routine;
+    .wait(5000);
+    -proposalReceived(true);
+    !wakeup_loop.
+
+// proposal from blinds
+@proposal_from_blinds_plan
++propose(blinds, raise) : owner_state("asleep") & wakeupMethod(blinds, naturalLight) <-
+    .print("Personal Assistant: Received proposal from Blinds Controller. Accepting proposal.");
+    .send(blinds_controller, tell, accept(blinds, raise));
+    +proposalReceived(true);
+    .print("Confirmation of proposal sent.").
+
+// prooposal from lights
+@proposal_from_lights_plan
++propose(lights, on) : owner_state("asleep") & wakeupMethod(lights, artificialLight) <-
+    .print("Personal Assistant: Received proposal from Lights Controller. Accepting proposal.");
+    .send(lights_controller, tell, accept(lights, on));
+    +proposalReceived(true).
+
+/* 
+ * Task 4.1: Plan for reacting to the addition of the belief that there is an upcoming event "now".
+ * Triggering event: addition of belief upcoming_event("now")
+ * Context: 
+ *   - If owner_state("awake") then print "Enjoy your event"
+ *   - If owner_state("asleep") then print "Starting wake-up routine"
+ */
+@upcoming_event_awake_plan
++upcoming_event("now") : owner_state("awake") <-
+    .print("Enjoy your event").
+
+@upcoming_event_asleep_plan
++upcoming_event("now") : owner_state("asleep") <-
+    .print("Starting wake-up routine");
+    .wait(7000);
+    !wakeup_loop.
+
+// Task 4.4
+
+@no_proposals_delegation_plan
++noProposals : true <-
+    .print("No proposals received");
+    .print("Delegating wake-up to a friend via MQTT...");
+    !send_mqtt("friend_agent", tell, "cfp(wake_up(user))");
+    .print("Delegation message sent to friend_agent").
+
 
 /* Import behavior of agents that work in CArtAgO environments */
 { include("$jacamoJar/templates/common-cartago.asl") }
