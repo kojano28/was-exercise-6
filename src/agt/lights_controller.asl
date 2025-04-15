@@ -43,11 +43,6 @@ lights("off").
    <- .print("Lights Controller received MQTT message from ", Sender, " with content: ", Content).
 
 
-
-
-// Task 4.3
-
-
 // if the lights are off, the lights controller should propose to turn on the lights
 @cfp_lights_off_plan
 +message(personal_assistant, tell, cfp(wake_up, increase_illuminance)) : lights("off") <-
@@ -61,6 +56,7 @@ lights("off").
     .print("Lights Controller: Lights are already on. Refusing CFP.");
     .send(personal_assistant, tell, refuse(lights, on)).
 
+// accepted proposal received
 @accept_lights_plan
 +accept(lights, on) : true <-
     .print("Lights Controller: Acceptance received. Turning lights on.");

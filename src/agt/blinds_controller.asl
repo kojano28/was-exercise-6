@@ -85,13 +85,13 @@ blinds("lowered").
     .print("Blinds Controller: Blinds are lowered. Proposing to raise blinds.");
     .send(personal_assistant, tell, propose(blinds, raise)).
 
-
 // if the blindes are already raised then it should refuse the call
 @cfp_blinds_raised_plan
 +message(personal_assistant, tell, cfp(wake_up, increase_illuminance)) : blinds("raised") <-
     .print("Blinds Controller: Blinds are already raised. Refusing CFP.");
     .send(personal_assistant, tell, refuse(blinds, raise)).
 
+// accepted proposal received
 @accept_blinds_plan
 +accept(blinds, raise) : true <-
     .print("Blinds Controller: Acceptance received. Raising blinds.");

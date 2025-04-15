@@ -36,15 +36,15 @@ wakeupMethod(lights, artificialLight).
 
 /* 
  * Task 1: Plan for sending MQTT messages (using the artifact directly).
- * Triggering event: addition of goal !send_mqtt(Recipient, Performative, Content)
+ * Triggering event: addition of goal !send_mqtt(Sender, Performative, Content)
  * Context: true (the agent is free to send MQTT messages whenever needed)
  * Body: calls the artifact operation 'sendMsg' passing the three parameters.
  */
 @send_mqtt_plan
-+!send_mqtt(Recipient, Perf, Content)
++!send_mqtt(Sender, Perf, Content)
   <- ?mqtt_artifact(Art);
-     sendMsg(Recipient, Perf, Content)[artifact_id(Art)];
-     .print("Personal Assistant Sent MQTT message to ", Recipient, " with performative ", Perf, " using ", Art).
+     sendMsg(Sender, Perf, Content)[artifact_id(Art)];
+     .print("MQTT message from ", Sender, " with performative ", Perf, " using ", Art).
 
 /* 
  * Task 1: Plan for broadcasting a message using Jasons  broadcast mechanism or MQTT.
@@ -53,8 +53,8 @@ wakeupMethod(lights, artificialLight).
  * Body: broadcasts a 'tell' message with the given Info to all agents in the MAS.
  */
 @selective_broadcast_plan
-+!selective_broadcast(Sender, Performative, Content) : broadcast(jason) <-
-    .broadcast(tell, message(Sender, Performative, Content));
++!selective_broadcast(Agent, Performative, Content) : broadcast(jason) <-
+    .broadcast(tell, message(Agent, Performative, Content));
     .print("Broadcasting via Jason: ", Content).
 
 +!selective_broadcast(Sender, Performative, Content) : broadcast(mqtt) <-
@@ -74,9 +74,9 @@ wakeupMethod(lights, artificialLight).
 /* 
  * Task 3: Plan for reacting to a received message, like states from the controllers, except their proposals
 */
-@message_plan
-+message(Sender, tell, Content) : true <-
-    .print("Personal Assistant received message from ", Sender, ": ", Content).
+@react_message_plan
++message(Agent, tell, Content) : true <-
+    .print("Personal Assistant received Jason message from ", Agent, ": ", Content).
 
 // Task 4.3
 
@@ -86,16 +86,19 @@ wakeupMethod(lights, artificialLight).
     .print("Wake-up Routine: Broadcasting CFP for wake up");
     !selective_broadcast(personal_assistant, tell, cfp(wake_up, increase_illuminance));
     .print("Broadcast/CFP sent.");
-    .wait(2000);
-    ?not proposalReceived(_);
-    !noProposals.
+    .wait(7000);
+    if (proposalReceived(_)) {
+        .print("Proposals received; proceeding with accepted actions.");
+    } else {
+        !noProposals;
+    }.
 
 // Task 4: additional plan to check the owners state and start wake_up_routine again
 @wakeup_loop_plan
 +!wakeup_loop : owner_state("asleep") <-
     .print("User is still asleep. Initiating a new wake-up round...");
     !wake_up_routine;
-    .wait(5000);
+    .wait(10000);
     -proposalReceived(true);
     !wakeup_loop.
 
@@ -128,16 +131,16 @@ wakeupMethod(lights, artificialLight).
 @upcoming_event_asleep_plan
 +upcoming_event("now") : owner_state("asleep") <-
     .print("Starting wake-up routine");
-    .wait(7000);
+    .wait(7000); //info: wait for the process, because of the artifact creation
     !wakeup_loop.
 
 // Task 4.4
 
 @no_proposals_delegation_plan
-+noProposals : true <-
++!noProposals : true <-
     .print("No proposals received");
     .print("Delegating wake-up to a friend via MQTT...");
-    !send_mqtt("friend_agent", tell, "cfp(wake_up(user))");
+    !send_mqtt("friend_agent", tell, "cfp(wake_up(owner))");
     .print("Delegation message sent to friend_agent").
 
 
